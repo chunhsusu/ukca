@@ -38,6 +38,7 @@
 MODULE photol_config_specification_mod
 
 USE missing_data_mod, ONLY: imdi, rmdi
+USE nlstcall_mod, ONLY: calendar_type
 
 USE photol_fieldname_mod,  ONLY: photol_jlabel_len
 
@@ -112,7 +113,7 @@ TYPE :: photol_config_spec_type
   INTEGER, ALLOCATABLE :: jind(:)    ! Index of species from files
 
   ! ----- -- Logical items ------------------------------
-  LOGICAL :: l_cal360                ! True if using a 360-day calendar
+  INTEGER :: cal_type                ! calendar type
 
   LOGICAL :: l_cloud_pc2             ! True if the atmosphere model is
                                      ! using the PC2 cloud scheme
@@ -268,7 +269,7 @@ photol_config%n_solcyc_ts = imdi
 IF (ALLOCATED(photol_config%jind)) DEALLOCATE(photol_config%jind)
 
 ! -- Set Logicals ---
-photol_config%l_cal360 = .FALSE.
+photol_config%cal_type = calendar_type
 
 photol_config%l_cloud_pc2 = .FALSE.
 photol_config%l_3d_cca = .FALSE.

@@ -24,6 +24,7 @@
 MODULE ukca_time_mod
 
 USE ukca_config_specification_mod, ONLY: ukca_config
+USE nlstcall_mod, ONLY: gregorian, i360day, i365day
 
 IMPLICIT NONE
 
@@ -110,9 +111,12 @@ IMPLICIT NONE
 ! Function argument
 INTEGER, INTENT(IN) :: year
 
-IF (ukca_config%l_cal360) THEN
+IF (ukca_config%cal_type == i360day) THEN
   ! 360-day calendar
   days_in_year = 360
+ELSE IF (ukca_config%cal_type == i365day) THEN
+  ! 365-day calendar
+  days_in_year = 365
 ELSE
   ! Gregorian calendar; look out for leap years
   IF (MOD(year,4) /= 0) THEN

@@ -137,7 +137,7 @@ SUBROUTINE ukca_setup(error_code,                                              &
                       const_avogadro,                                          &
                       const_boltzmann,                                         &
                       const_rho_so4,                                           &
-                      l_cal360,                                                &
+                      cal_type,                                                &
                       l_ukca_chem_aero,                                        &
                       l_ukca_mode,                                             &
                       l_fix_tropopause_level,                                  &
@@ -435,6 +435,7 @@ INTEGER, OPTIONAL, INTENT(IN) :: i_photol_scheme_off
 INTEGER, OPTIONAL, INTENT(IN) :: i_photol_scheme_strat_only
 INTEGER, OPTIONAL, INTENT(IN) :: i_photol_scheme_2d
 INTEGER, OPTIONAL, INTENT(IN) :: i_photol_scheme_fastjx
+INTEGER, OPTIONAL, INTENT(IN) :: cal_type
 
 REAL, OPTIONAL, INTENT(IN) :: dzsoil_layer1
 REAL, OPTIONAL, INTENT(IN) :: timestep
@@ -470,7 +471,6 @@ REAL, OPTIONAL, INTENT(IN) :: const_avogadro
 REAL, OPTIONAL, INTENT(IN) :: const_boltzmann
 REAL, OPTIONAL, INTENT(IN) :: const_rho_so4
 
-LOGICAL, OPTIONAL, INTENT(IN) :: l_cal360
 LOGICAL, OPTIONAL, INTENT(IN) :: l_ukca_chem_aero
 LOGICAL, OPTIONAL, INTENT(IN) :: l_ukca_mode
 LOGICAL, OPTIONAL, INTENT(IN) :: l_fix_tropopause_level
@@ -984,7 +984,7 @@ IF ((ukca_config%i_ukca_chem /= i_ukca_chem_off .AND.                          &
      .NOT. ukca_config%l_ukca_emissions_off) .OR.                              &
     ukca_config%i_ukca_topboundary >= i_top_bc .OR.                            &
     ukca_config%l_use_photolysis) THEN
-  IF (PRESENT(l_cal360)) ukca_config%l_cal360 = l_cal360
+  IF (PRESENT(cal_type)) ukca_config%cal_type = cal_type
 END IF
 
 ! -- UKCA emissions configuration options ------------------------------

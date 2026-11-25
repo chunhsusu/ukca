@@ -65,7 +65,7 @@ IMPLICIT NONE
 CHARACTER(LEN=*), PARAMETER, PRIVATE :: ModuleName='FASTJX_SOLAR2_MOD'
 
 CONTAINS
-SUBROUTINE fastjx_solar2(timej,sinlat,longitude,lcal360)
+SUBROUTINE fastjx_solar2(timej,sinlat,longitude,calendar_type)
 
 USE   fastjx_data,    ONLY: daynumber,tau,szamax,                              &
                             sza_2d,SZAFAC_2d
@@ -74,10 +74,11 @@ USE photol_constants_mod, ONLY: pi => const_pi,                                &
 
 USE yomhook,          ONLY: lhook, dr_hook
 USE parkind1,         ONLY: jprb, jpim
+USE nlstcall_mod,     ONLY: i360day
 IMPLICIT  NONE
 
 
-LOGICAL, INTENT(IN) :: lcal360            ! T for 360 day calendar
+INTEGER, INTENT(IN) :: calendar_type
 
 REAL, INTENT(IN)    :: timej              ! time offset in hours
 REAL, INTENT(IN)    :: sinlat(:,:)        ! sine of latitude
@@ -102,7 +103,7 @@ CHARACTER(LEN=*), PARAMETER :: RoutineName='FASTJX_SOLAR2'
 
 IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
-IF (lcal360) THEN
+IF (calendar_type == i360day) THEN
   sindec = 0.3978*SIN(2* pi *(REAL(daynumber)-80.0)/360.0)
 ELSE
   sindec = 0.3978*SIN(2* pi *(REAL(daynumber)-80.0)/365.0)

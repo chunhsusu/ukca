@@ -1,0 +1,307 @@
+diff --git a/src/control/core/interface/ukca_config_specification_mod.F90 b/src/control/core/interface/ukca_config_specification_mod.F90
+index 9213f95..d3c48ff 100644
+--- a/src/control/core/interface/ukca_config_specification_mod.F90
++++ b/src/control/core/interface/ukca_config_specification_mod.F90
+@@ -39,6 +39,7 @@
+ MODULE ukca_config_specification_mod
+ 
+ USE ukca_missing_data_mod, ONLY: imdi, rmdi
++USE nlstcall_mod, ONLY: calendar_type, gregorian
+ 
+ USE ukca_mode_setup,  ONLY: glomap_variables_type
+ 
+@@ -104,7 +105,7 @@ TYPE :: ukca_config_spec_type
+   INTEGER, ALLOCATABLE :: i_elev_ice(:)
+                                        ! Indices of surface type 'elevated ice'
+   REAL :: dzsoil_layer1                ! Thickness of surface soil layer (m)
+-  LOGICAL :: l_cal360                  ! True if UKCA is expected to use a
++  INTEGER :: cal_type                  ! i360day if UKCA is expected to use a
+                                        ! 360-day calendar for applying a top
+                                        ! boundary condition in stratospheric
+                                        ! chemistry schemes and/or for
+@@ -827,7 +828,7 @@ ukca_config%i_soil = imdi
+ ukca_config%i_ice = imdi
+ IF (ALLOCATED(ukca_config%i_elev_ice)) DEALLOCATE(ukca_config%i_elev_ice)
+ ukca_config%dzsoil_layer1 = rmdi
+-ukca_config%l_cal360 = .FALSE.
++ukca_config%cal_type = gregorian
+ ukca_config%timestep = rmdi
+ 
+ ! -- General UKCA configuration options --
+@@ -1122,7 +1123,7 @@ SUBROUTINE ukca_get_config(                                                    &
+    hno3_uptake_coeff,                                                          &
+    sigwmin,                                                                    &
+    sigma_updraught_scaling,                                                    &
+-   l_cal360,                                                                   &
++   cal_type,                                                                   &
+    l_ukca_chem_aero,                                                           &
+    l_ukca_mode,                                                                &
+    l_fix_tropopause_level,                                                     &
+@@ -1298,6 +1299,7 @@ INTEGER, OPTIONAL, INTENT(OUT) :: i_ukca_nwbins
+ INTEGER, OPTIONAL, INTENT(OUT) :: n_dust_emissions
+ INTEGER, OPTIONAL, INTENT(OUT) :: i_dust_scheme
+ INTEGER, OPTIONAL, INTENT(OUT) :: i_primss_method
++INTEGER, OPTIONAL, INTENT(OUT) :: cal_type
+ 
+ REAL, OPTIONAL, INTENT(OUT) :: dzsoil_layer1
+ REAL, OPTIONAL, INTENT(OUT) :: timestep
+@@ -1325,7 +1327,6 @@ REAL, OPTIONAL, INTENT(OUT) :: ph_fit_coeff_b
+ REAL, OPTIONAL, INTENT(OUT) :: ph_fit_intercept
+ REAL, OPTIONAL, INTENT(OUT) :: hno3_uptake_coeff
+ 
+-LOGICAL, OPTIONAL, INTENT(OUT) :: l_cal360
+ LOGICAL, OPTIONAL, INTENT(OUT) :: l_ukca_chem_aero
+ LOGICAL, OPTIONAL, INTENT(OUT) :: l_ukca_mode
+ LOGICAL, OPTIONAL, INTENT(OUT) :: l_fix_tropopause_level
+@@ -1495,7 +1496,7 @@ IF (PRESENT(i_ice)) i_ice = ukca_config%i_ice
+ IF (PRESENT(i_elev_ice))                                                       &
+   CALL copy_config_vector(ukca_config%i_elev_ice, i_elev_ice)
+ IF (PRESENT(dzsoil_layer1)) dzsoil_layer1 = ukca_config%dzsoil_layer1
+-IF (PRESENT(l_cal360)) l_cal360 = ukca_config%l_cal360
++IF (PRESENT(cal_type)) cal_type = ukca_config%cal_type
+ IF (PRESENT(timestep)) timestep = ukca_config%timestep
+ 
+ ! -- General UKCA configuration options --
+diff --git a/src/control/core/top_level/ukca_setup_mod.F90 b/src/control/core/top_level/ukca_setup_mod.F90
+index affe86e..3ad5e87 100644
+--- a/src/control/core/top_level/ukca_setup_mod.F90
++++ b/src/control/core/top_level/ukca_setup_mod.F90
+@@ -137,7 +137,7 @@ SUBROUTINE ukca_setup(error_code,                                              &
+                       const_avogadro,                                          &
+                       const_boltzmann,                                         &
+                       const_rho_so4,                                           &
+-                      l_cal360,                                                &
++                      cal_type,                                                &
+                       l_ukca_chem_aero,                                        &
+                       l_ukca_mode,                                             &
+                       l_fix_tropopause_level,                                  &
+@@ -435,6 +435,7 @@ INTEGER, OPTIONAL, INTENT(IN) :: i_photol_scheme_off
+ INTEGER, OPTIONAL, INTENT(IN) :: i_photol_scheme_strat_only
+ INTEGER, OPTIONAL, INTENT(IN) :: i_photol_scheme_2d
+ INTEGER, OPTIONAL, INTENT(IN) :: i_photol_scheme_fastjx
++INTEGER, OPTIONAL, INTENT(IN) :: cal_type
+ 
+ REAL, OPTIONAL, INTENT(IN) :: dzsoil_layer1
+ REAL, OPTIONAL, INTENT(IN) :: timestep
+@@ -470,7 +471,6 @@ REAL, OPTIONAL, INTENT(IN) :: const_avogadro
+ REAL, OPTIONAL, INTENT(IN) :: const_boltzmann
+ REAL, OPTIONAL, INTENT(IN) :: const_rho_so4
+ 
+-LOGICAL, OPTIONAL, INTENT(IN) :: l_cal360
+ LOGICAL, OPTIONAL, INTENT(IN) :: l_ukca_chem_aero
+ LOGICAL, OPTIONAL, INTENT(IN) :: l_ukca_mode
+ LOGICAL, OPTIONAL, INTENT(IN) :: l_fix_tropopause_level
+@@ -984,7 +984,7 @@ IF ((ukca_config%i_ukca_chem /= i_ukca_chem_off .AND.                          &
+      .NOT. ukca_config%l_ukca_emissions_off) .OR.                              &
+     ukca_config%i_ukca_topboundary >= i_top_bc .OR.                            &
+     ukca_config%l_use_photolysis) THEN
+-  IF (PRESENT(l_cal360)) ukca_config%l_cal360 = l_cal360
++  IF (PRESENT(cal_type)) ukca_config%cal_type = cal_type
+ END IF
+ 
+ ! -- UKCA emissions configuration options ------------------------------
+diff --git a/src/control/core/top_level/ukca_time_mod.F90 b/src/control/core/top_level/ukca_time_mod.F90
+index a10010d..ec0fc2c 100644
+--- a/src/control/core/top_level/ukca_time_mod.F90
++++ b/src/control/core/top_level/ukca_time_mod.F90
+@@ -24,6 +24,7 @@
+ MODULE ukca_time_mod
+ 
+ USE ukca_config_specification_mod, ONLY: ukca_config
++USE nlstcall_mod, ONLY: gregorian, i360day, i365day
+ 
+ IMPLICIT NONE
+ 
+@@ -110,9 +111,12 @@ IMPLICIT NONE
+ ! Function argument
+ INTEGER, INTENT(IN) :: year
+ 
+-IF (ukca_config%l_cal360) THEN
++IF (ukca_config%cal_type == i360day) THEN
+   ! 360-day calendar
+   days_in_year = 360
++ELSE IF (ukca_config%cal_type == i365day) THEN
++  ! 365-day calendar
++  days_in_year = 365
+ ELSE
+   ! Gregorian calendar; look out for leap years
+   IF (MOD(year,4) /= 0) THEN
+diff --git a/src/control/photolysis/interface/photol_config_specification_mod.F90 b/src/control/photolysis/interface/photol_config_specification_mod.F90
+index f4862c8..2bf8596 100644
+--- a/src/control/photolysis/interface/photol_config_specification_mod.F90
++++ b/src/control/photolysis/interface/photol_config_specification_mod.F90
+@@ -38,6 +38,7 @@
+ MODULE photol_config_specification_mod
+ 
+ USE missing_data_mod, ONLY: imdi, rmdi
++USE nlstcall_mod, ONLY: calendar_type, gregorian
+ 
+ USE photol_fieldname_mod,  ONLY: photol_jlabel_len
+ 
+@@ -112,7 +113,7 @@ TYPE :: photol_config_spec_type
+   INTEGER, ALLOCATABLE :: jind(:)    ! Index of species from files
+ 
+   ! ----- -- Logical items ------------------------------
+-  LOGICAL :: l_cal360                ! True if using a 360-day calendar
++  INTEGER :: cal_type                ! calendar type
+ 
+   LOGICAL :: l_cloud_pc2             ! True if the atmosphere model is
+                                      ! using the PC2 cloud scheme
+@@ -268,7 +269,7 @@ photol_config%n_solcyc_ts = imdi
+ IF (ALLOCATED(photol_config%jind)) DEALLOCATE(photol_config%jind)
+ 
+ ! -- Set Logicals ---
+-photol_config%l_cal360 = .FALSE.
++photol_config%cal_type = gregorian
+ 
+ photol_config%l_cloud_pc2 = .FALSE.
+ photol_config%l_3d_cca = .FALSE.
+diff --git a/src/control/photolysis/interface/photol_setup_mod.F90 b/src/control/photolysis/interface/photol_setup_mod.F90
+index 6346c7f..bc39dc7 100644
+--- a/src/control/photolysis/interface/photol_setup_mod.F90
++++ b/src/control/photolysis/interface/photol_setup_mod.F90
+@@ -60,7 +60,7 @@ SUBROUTINE photol_setup(i_photol_scheme,                                       &
+                       naa,                                                     &
+                       n_solcyc_ts,                                             &
+                       jind,                                                    &
+-                      l_cal360,                                                &
++                      cal_type,                                                &
+                       l_cloud_pc2,                                             &
+                       l_3d_cca,                                                &
+                       l_enable_diag_um,                                        &
+@@ -193,7 +193,7 @@ INTEGER, OPTIONAL, INTENT(IN) :: naa
+ INTEGER, OPTIONAL, INTENT(IN) :: n_solcyc_ts
+ INTEGER, ALLOCATABLE, OPTIONAL, INTENT(IN) :: jind(:)
+ 
+-LOGICAL, OPTIONAL, INTENT(IN) :: l_cal360
++INTEGER, OPTIONAL, INTENT(IN) :: cal_type
+ 
+ LOGICAL, OPTIONAL, INTENT(IN) :: l_cloud_pc2
+ LOGICAL, OPTIONAL, INTENT(IN) :: l_3d_cca
+@@ -312,7 +312,7 @@ IF (PRESENT(n_cca_lev))    photol_config%n_cca_lev    = n_cca_lev
+ IF (PRESENT(solcylc_start_year)) photol_config%solcylc_start_year              &
+                                                       = solcylc_start_year
+ 
+-IF (PRESENT(l_cal360))     photol_config%l_cal360     = l_cal360
++IF (PRESENT(cal_type))     photol_config%cal_type     = cal_type
+ 
+ IF (PRESENT(l_cloud_pc2))    photol_config%l_cloud_pc2 = l_cloud_pc2
+ IF (PRESENT(l_3d_cca))       photol_config%l_3d_cca    = l_3d_cca
+diff --git a/src/science/core/emissions/ukca_add_emiss_mod.F90 b/src/science/core/emissions/ukca_add_emiss_mod.F90
+index 0614aed..ef28c8a 100644
+--- a/src/science/core/emissions/ukca_add_emiss_mod.F90
++++ b/src/science/core/emissions/ukca_add_emiss_mod.F90
+@@ -103,7 +103,8 @@ USE yomhook,                 ONLY: lhook, dr_hook ! DrHook
+ USE ereport_mod,             ONLY: ereport
+ USE errormessagelength_mod,  ONLY: errormessagelength
+ USE umPrintMgr,  ONLY: umPrint, umMessage, PrintStatus, PrStatus_Normal
+-
++USE nlstcall_mod, ONLY: i360day
++        
+ IMPLICIT NONE
+ 
+ ! Subroutine arguments
+@@ -292,7 +293,7 @@ hourly_scaling_2d (:,:)  = 0.0     ! 2D hourly scaling as a function of
+ ! Get day of week (may be needed for time profiling of emissions in air
+ ! quality modelling). Note that this would not have any meaning and
+ ! therefore is not allowed in the case of a 360-day calendar.
+-IF (.NOT. ukca_config%l_cal360) THEN
++IF (ukca_config%cal_type /= i360day) THEN
+   iday_week = day_of_week (iday, imonth, iyear)
+ END IF
+ 
+@@ -681,7 +682,7 @@ DO l = 1, num_em_flds       ! loop over emission fields
+   !   for a weekely cycle in the emissions. Note that this factor is set to 1
+   !   in the case of a 360-day calendar because a weekly cycle does not have
+   !   any meaning in that context.
+-  IF (ukca_config%l_cal360) THEN
++  IF (ukca_config%cal_type == i360day) THEN
+     fdaily_scaling = 1.0
+ 
+     ! Do not allow attributes indicating a specific weekly cycle
+diff --git a/src/science/photolysis/fastjx/fastjx_solar2.F90 b/src/science/photolysis/fastjx/fastjx_solar2.F90
+index 854852c..581d253 100644
+--- a/src/science/photolysis/fastjx/fastjx_solar2.F90
++++ b/src/science/photolysis/fastjx/fastjx_solar2.F90
+@@ -65,7 +65,7 @@ IMPLICIT NONE
+ CHARACTER(LEN=*), PARAMETER, PRIVATE :: ModuleName='FASTJX_SOLAR2_MOD'
+ 
+ CONTAINS
+-SUBROUTINE fastjx_solar2(timej,sinlat,longitude,lcal360)
++SUBROUTINE fastjx_solar2(timej,sinlat,longitude,calendar_type)
+ 
+ USE   fastjx_data,    ONLY: daynumber,tau,szamax,                              &
+                             sza_2d,SZAFAC_2d
+@@ -74,10 +74,11 @@ USE photol_constants_mod, ONLY: pi => const_pi,                                &
+ 
+ USE yomhook,          ONLY: lhook, dr_hook
+ USE parkind1,         ONLY: jprb, jpim
++USE nlstcall_mod,     ONLY: i360day
+ IMPLICIT  NONE
+ 
+ 
+-LOGICAL, INTENT(IN) :: lcal360            ! T for 360 day calendar
++INTEGER, INTENT(IN) :: calendar_type
+ 
+ REAL, INTENT(IN)    :: timej              ! time offset in hours
+ REAL, INTENT(IN)    :: sinlat(:,:)        ! sine of latitude
+@@ -102,7 +103,7 @@ CHARACTER(LEN=*), PARAMETER :: RoutineName='FASTJX_SOLAR2'
+ 
+ IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+ 
+-IF (lcal360) THEN
++IF (calendar_type == i360day) THEN
+   sindec = 0.3978*SIN(2* pi *(REAL(daynumber)-80.0)/360.0)
+ ELSE
+   sindec = 0.3978*SIN(2* pi *(REAL(daynumber)-80.0)/365.0)
+diff --git a/src/science/photolysis/fastjx/photol_solflux_mod.F90 b/src/science/photolysis/fastjx/photol_solflux_mod.F90
+index 50e58c9..8af8102 100644
+--- a/src/science/photolysis/fastjx/photol_solflux_mod.F90
++++ b/src/science/photolysis/fastjx/photol_solflux_mod.F90
+@@ -50,6 +50,7 @@ SUBROUTINE photol_solflux(current_time, tau, lookup, solcyc, x)
+ USE fastjx_data, ONLY: solcyc_av, solcyc_ts, n_solcyc_av, n_solcyc_ts
+ USE yomhook,  ONLY: lhook, dr_hook
+ USE parkind1, ONLY: jprb, jpim
++USE nlstcall_mod, ONLY: i360day, i365day
+ 
+ IMPLICIT NONE
+ 
+@@ -114,8 +115,10 @@ obs_end_year = REAL(photol_config%solcylc_start_year) +                        &
+ 
+ 
+ ! get the correct number of days in the months
+-IF (photol_config%l_cal360) THEN
++IF (photol_config%cal_type == i360day) THEN
+   days_in_month = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
++ELSE IF (photol_config%cal_type == i365day) THEN
++  days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+ ELSE
+   IF (days_in_year(i_year) < 366) THEN
+     days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+@@ -208,9 +211,12 @@ IMPLICIT NONE
+ ! Function argument
+ INTEGER, INTENT(IN) :: year
+ 
+-IF (photol_config%l_cal360) THEN
++IF (photol_config%cal_type == i360day) THEN
+   ! 360-day calendar
+   days_in_year = 360
++ELSE IF (photol_config%cal_type == i365day) THEN
++  ! 365-day calendar
++  days_in_year = 365
+ ELSE
+   ! Gregorian calendar; look out for leap years
+   IF (MOD(year,4) /= 0) THEN
+diff --git a/src/science/photolysis/fastjx/ukca_fastjx.F90 b/src/science/photolysis/fastjx/ukca_fastjx.F90
+index 2e66bb6..3ed36ee 100644
+--- a/src/science/photolysis/fastjx/ukca_fastjx.F90
++++ b/src/science/photolysis/fastjx/ukca_fastjx.F90
+@@ -310,7 +310,7 @@ tau                = i_hour*1.0+i_minute/60.0+i_second/3600.0                  &
+ ! Calculate solar zenith angles
+ 
+ CALL fastjx_solar2 (timej, sin_latitude, pi_over_180*longitude,                &
+-                    photol_config%l_cal360)
++                    photol_config%cal_type)
+ 
+ ! Modify solar flux if using solar cycle
+ IF (photol_config%i_solcylc_type > 0) THEN

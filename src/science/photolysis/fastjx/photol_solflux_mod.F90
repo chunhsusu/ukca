@@ -50,6 +50,7 @@ SUBROUTINE photol_solflux(current_time, tau, lookup, solcyc, x)
 USE fastjx_data, ONLY: solcyc_av, solcyc_ts, n_solcyc_av, n_solcyc_ts
 USE yomhook,  ONLY: lhook, dr_hook
 USE parkind1, ONLY: jprb, jpim
+USE nlstcall_mod, ONLY: i360day, i365day
 
 IMPLICIT NONE
 
@@ -114,8 +115,10 @@ obs_end_year = REAL(photol_config%solcylc_start_year) +                        &
 
 
 ! get the correct number of days in the months
-IF (photol_config%l_cal360) THEN
+IF (photol_config%cal_type == i360day) THEN
   days_in_month = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+ELSE IF (photol_config%cal_type == i365day) THEN
+  days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 ELSE
   IF (days_in_year(i_year) < 366) THEN
     days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -208,9 +211,12 @@ IMPLICIT NONE
 ! Function argument
 INTEGER, INTENT(IN) :: year
 
-IF (photol_config%l_cal360) THEN
+IF (photol_config%cal_type == i360day) THEN
   ! 360-day calendar
   days_in_year = 360
+ELSE IF (photol_config%cal_type == i365day) THEN
+  ! 365-day calendar
+  days_in_year = 365
 ELSE
   ! Gregorian calendar; look out for leap years
   IF (MOD(year,4) /= 0) THEN

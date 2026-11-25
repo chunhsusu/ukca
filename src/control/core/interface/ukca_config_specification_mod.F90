@@ -39,6 +39,7 @@
 MODULE ukca_config_specification_mod
 
 USE ukca_missing_data_mod, ONLY: imdi, rmdi
+USE nlstcall_mod, ONLY: calendar_type
 
 USE ukca_mode_setup,  ONLY: glomap_variables_type
 
@@ -104,7 +105,7 @@ TYPE :: ukca_config_spec_type
   INTEGER, ALLOCATABLE :: i_elev_ice(:)
                                        ! Indices of surface type 'elevated ice'
   REAL :: dzsoil_layer1                ! Thickness of surface soil layer (m)
-  LOGICAL :: l_cal360                  ! True if UKCA is expected to use a
+  INTEGER :: cal_type                  ! i360day if UKCA is expected to use a
                                        ! 360-day calendar for applying a top
                                        ! boundary condition in stratospheric
                                        ! chemistry schemes and/or for
@@ -827,7 +828,7 @@ ukca_config%i_soil = imdi
 ukca_config%i_ice = imdi
 IF (ALLOCATED(ukca_config%i_elev_ice)) DEALLOCATE(ukca_config%i_elev_ice)
 ukca_config%dzsoil_layer1 = rmdi
-ukca_config%l_cal360 = .FALSE.
+ukca_config%cal_type = calendar_type
 ukca_config%timestep = rmdi
 
 ! -- General UKCA configuration options --
@@ -1122,7 +1123,7 @@ SUBROUTINE ukca_get_config(                                                    &
    hno3_uptake_coeff,                                                          &
    sigwmin,                                                                    &
    sigma_updraught_scaling,                                                    &
-   l_cal360,                                                                   &
+   cal_type,                                                                   &
    l_ukca_chem_aero,                                                           &
    l_ukca_mode,                                                                &
    l_fix_tropopause_level,                                                     &
@@ -1298,6 +1299,7 @@ INTEGER, OPTIONAL, INTENT(OUT) :: i_ukca_nwbins
 INTEGER, OPTIONAL, INTENT(OUT) :: n_dust_emissions
 INTEGER, OPTIONAL, INTENT(OUT) :: i_dust_scheme
 INTEGER, OPTIONAL, INTENT(OUT) :: i_primss_method
+INTEGER, OPTIONAL, INTENT(OUT) :: cal_type
 
 REAL, OPTIONAL, INTENT(OUT) :: dzsoil_layer1
 REAL, OPTIONAL, INTENT(OUT) :: timestep
@@ -1325,7 +1327,6 @@ REAL, OPTIONAL, INTENT(OUT) :: ph_fit_coeff_b
 REAL, OPTIONAL, INTENT(OUT) :: ph_fit_intercept
 REAL, OPTIONAL, INTENT(OUT) :: hno3_uptake_coeff
 
-LOGICAL, OPTIONAL, INTENT(OUT) :: l_cal360
 LOGICAL, OPTIONAL, INTENT(OUT) :: l_ukca_chem_aero
 LOGICAL, OPTIONAL, INTENT(OUT) :: l_ukca_mode
 LOGICAL, OPTIONAL, INTENT(OUT) :: l_fix_tropopause_level
@@ -1495,7 +1496,7 @@ IF (PRESENT(i_ice)) i_ice = ukca_config%i_ice
 IF (PRESENT(i_elev_ice))                                                       &
   CALL copy_config_vector(ukca_config%i_elev_ice, i_elev_ice)
 IF (PRESENT(dzsoil_layer1)) dzsoil_layer1 = ukca_config%dzsoil_layer1
-IF (PRESENT(l_cal360)) l_cal360 = ukca_config%l_cal360
+IF (PRESENT(cal_type)) cal_type = ukca_config%cal_type
 IF (PRESENT(timestep)) timestep = ukca_config%timestep
 
 ! -- General UKCA configuration options --

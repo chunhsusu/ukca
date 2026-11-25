@@ -310,7 +310,7 @@ tau                = i_hour*1.0+i_minute/60.0+i_second/3600.0                  &
 ! Calculate solar zenith angles
 
 CALL fastjx_solar2 (timej, sin_latitude, pi_over_180*longitude,                &
-                    photol_config%l_cal360)
+                    photol_config%cal_type)
 
 ! Modify solar flux if using solar cycle
 IF (photol_config%i_solcylc_type > 0) THEN

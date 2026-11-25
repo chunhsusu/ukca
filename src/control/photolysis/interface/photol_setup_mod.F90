@@ -60,7 +60,7 @@ SUBROUTINE photol_setup(i_photol_scheme,                                       &
                       naa,                                                     &
                       n_solcyc_ts,                                             &
                       jind,                                                    &
-                      l_cal360,                                                &
+                      cal_type,                                                &
                       l_cloud_pc2,                                             &
                       l_3d_cca,                                                &
                       l_enable_diag_um,                                        &
@@ -193,7 +193,7 @@ INTEGER, OPTIONAL, INTENT(IN) :: naa
 INTEGER, OPTIONAL, INTENT(IN) :: n_solcyc_ts
 INTEGER, ALLOCATABLE, OPTIONAL, INTENT(IN) :: jind(:)
 
-LOGICAL, OPTIONAL, INTENT(IN) :: l_cal360
+INTEGER, OPTIONAL, INTENT(IN) :: cal_type
 
 LOGICAL, OPTIONAL, INTENT(IN) :: l_cloud_pc2
 LOGICAL, OPTIONAL, INTENT(IN) :: l_3d_cca
@@ -312,7 +312,7 @@ IF (PRESENT(n_cca_lev))    photol_config%n_cca_lev    = n_cca_lev
 IF (PRESENT(solcylc_start_year)) photol_config%solcylc_start_year              &
                                                       = solcylc_start_year
 
-IF (PRESENT(l_cal360))     photol_config%l_cal360     = l_cal360
+IF (PRESENT(cal_type))     photol_config%cal_type     = cal_type
 
 IF (PRESENT(l_cloud_pc2))    photol_config%l_cloud_pc2 = l_cloud_pc2
 IF (PRESENT(l_3d_cca))       photol_config%l_3d_cca    = l_3d_cca

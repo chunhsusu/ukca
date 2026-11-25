@@ -103,7 +103,8 @@ USE yomhook,                 ONLY: lhook, dr_hook ! DrHook
 USE ereport_mod,             ONLY: ereport
 USE errormessagelength_mod,  ONLY: errormessagelength
 USE umPrintMgr,  ONLY: umPrint, umMessage, PrintStatus, PrStatus_Normal
-
+USE nlstcall_mod, ONLY: i360day
+        
 IMPLICIT NONE
 
 ! Subroutine arguments
@@ -292,7 +293,7 @@ hourly_scaling_2d (:,:)  = 0.0     ! 2D hourly scaling as a function of
 ! Get day of week (may be needed for time profiling of emissions in air
 ! quality modelling). Note that this would not have any meaning and
 ! therefore is not allowed in the case of a 360-day calendar.
-IF (.NOT. ukca_config%l_cal360) THEN
+IF (ukca_config%cal_type /= i360day) THEN
   iday_week = day_of_week (iday, imonth, iyear)
 END IF
 
@@ -681,7 +682,7 @@ DO l = 1, num_em_flds       ! loop over emission fields
   !   for a weekely cycle in the emissions. Note that this factor is set to 1
   !   in the case of a 360-day calendar because a weekly cycle does not have
   !   any meaning in that context.
-  IF (ukca_config%l_cal360) THEN
+  IF (ukca_config%cal_type == i360day) THEN
     fdaily_scaling = 1.0
 
     ! Do not allow attributes indicating a specific weekly cycle
